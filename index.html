@@ -777,11 +777,15 @@ render() {
           this.ctx.rotate(l.rotation);
           this.ctx.scale(l.scale, l.scale);
 
-          // 根據 isLit 狀態應用濾鏡
-        if (!l.isLit) {
-            this.ctx.filter = 'brightness(0.2) grayscale(1)'; // 稍微變暗但保持色彩
+        
+         // 根據 isLit 狀態調整透明度和色彩
+          if (!l.isLit) {
+            this.ctx.globalAlpha = 0.4;
+            this.ctx.globalCompositeOperation = 'source-over';
           } else {
-            this.ctx.filter = 'drop-shadow(0 0 10px rgba(255, 255, 150, 0.7))'; // 更亮並添加光暈效果
+            this.ctx.globalAlpha = 1.0;
+            this.ctx.shadowColor = 'rgba(255, 255, 150, 0.8)';
+            this.ctx.shadowBlur = 15;
           }
           
           // 確保天燈方向正確：如果需要翻轉則垂直翻轉
@@ -791,6 +795,12 @@ render() {
           
           this.ctx.drawImage(l.img, -40, -50, 80, 100);
           
+          // 如果未點亮，再加一層半透明的深色遮罩
+          if (!l.isLit) {
+            this.ctx.globalAlpha = 0.6;
+            this.ctx.fillStyle = 'rgba(50, 50, 80, 0.7)';
+            this.ctx.fillRect(-40, -50, 80, 100);
+          }
           this.ctx.restore(); // 重置濾鏡和變換
         }
       }
@@ -816,4 +826,3 @@ render() {
     });
 </script></body>
 </html>
-
