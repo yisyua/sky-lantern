@@ -778,10 +778,10 @@ render() {
           this.ctx.scale(l.scale, l.scale);
 
           // 根據 isLit 狀態應用濾鏡
-          if (!l.isLit) {
-            this.ctx.filter = 'brightness(0.6) saturate(0.8)'; // 稍微變暗但保持色彩
+        if (!l.isLit) {
+            this.ctx.filter = 'brightness(0.2) grayscale(1)'; // 稍微變暗但保持色彩
           } else {
-            this.ctx.filter = 'brightness(1.2) drop-shadow(0 0 15px rgba(255, 255, 150, 0.8))'; // 更亮並添加光暈效果
+            this.ctx.filter = 'drop-shadow(0 0 10px rgba(255, 255, 150, 0.7))'; // 更亮並添加光暈效果
           }
           
           // 確保天燈方向正確：如果需要翻轉則垂直翻轉
@@ -816,3 +816,4 @@ render() {
     });
 </script></body>
 </html>
+
