@@ -778,30 +778,38 @@ render() {
           this.ctx.scale(l.scale, l.scale);
 
         
-         // 根據 isLit 狀態調整透明度和色彩
-          if (!l.isLit) {
-            this.ctx.globalAlpha = 0.4;
-            this.ctx.globalCompositeOperation = 'source-over';
-          } else {
-            this.ctx.globalAlpha = 1.0;
-            this.ctx.shadowColor = 'rgba(255, 255, 150, 0.8)';
-            this.ctx.shadowBlur = 15;
-          }
-          
-          // 確保天燈方向正確：如果需要翻轉則垂直翻轉
-          if (l.flipVertical) {
-            this.ctx.scale(1, -1);
-          }
-          
-          this.ctx.drawImage(l.img, -40, -50, 80, 100);
-          
-          // 如果未點亮，再加一層半透明的深色遮罩
-          if (!l.isLit) {
-            this.ctx.globalAlpha = 0.6;
-            this.ctx.fillStyle = 'rgba(50, 50, 80, 0.7)';
-            this.ctx.fillRect(-40, -50, 80, 100);
-          }
-          this.ctx.restore(); // 重置濾鏡和變換
+        // 根據 isLit 狀態調整效果
+if (l.isLit) {
+  // 點亮狀態：設定發光效果
+  this.ctx.globalAlpha = 1.0;
+  this.ctx.shadowColor = 'rgba(255, 255, 150, 0.8)';
+  this.ctx.shadowBlur = 15;
+}
+
+// 確保天燈方向正確：如果需要翻轉則垂直翻轉
+if (l.flipVertical) {
+  this.ctx.scale(1, -1);
+}
+
+// 繪製天燈圖片
+this.ctx.drawImage(l.img, -40, -50, 80, 100);
+
+// 如果天燈未點亮，在圖片上繪製半透明的深色遮罩
+if (!l.isLit) {
+  // 將圖層混合模式設定為 'source-atop'
+  // 這會讓接下來的繪製只會影響已存在的像素
+  this.ctx.globalCompositeOperation = 'source-atop';
+  
+  // 繪製一個半透明的深色矩形，它會被「裁剪」成天燈的形狀
+  this.ctx.globalAlpha = 0.6; // 設定遮罩透明度
+  this.ctx.fillStyle = 'rgba(50, 50, 80, 0.7)';
+  this.ctx.fillRect(-40, -50, 80, 100);
+}
+
+// 恢復預設的圖層混合模式，以免影響其他繪製
+this.ctx.globalCompositeOperation = 'source-over';
+
+this.ctx.restore(); // 重置所有變換與濾鏡設定
         }
       }
     }
