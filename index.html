@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>天燈點擊遊戲</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      touch-action: manipulation;
+    }
+
+    body {
+      font-family: 'Arial', sans-serif;
+      background: linear-gradient(
+        180deg,
+        #f7b267 0%,   /* 柔和的橘黃，地平線 */
+        #f4845f 40%,  /* 淡橘紅，黃昏 */
+        #2c3e50 100%  /* 深藍，夜空 */
+      );
+      overflow: hidden;
+      height: 100vh;
+      user-select: none;
+      position: relative;
+    }
+
+
+    @keyframes twinkle {
+      0% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+
+    #gameCanvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      touch-action: none;
+      position: relative;
+      z-index: 10;
+      cursor: pointer;
+    }
+
+    /* 遊戲介面 */
+    .game-ui {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 50;
+      padding: 15px;
+    }
+
+    .hud {
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(15px);
+      border-radius: 20px;
+      padding: 20px;
+      border: 2px solid rgba(255, 215, 0, 0.4);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 20px;
+      text-align: center;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .stat {
+      color: #fff;
+      font-weight: bold;
+    }
+
+    .stat-label {
+      font-size: 0.9rem;
+      color: #ffd700;
+      margin-bottom: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .stat-value {
+      font-size: 1.8rem;
+      color: #ffffff;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    /* 特效 */
+    .explosion {
+      position: absolute;
+      pointer-events: none;
+      z-index: 25;
+    }
+
+    .particle {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      background: #ffd700;
+      border-radius: 50%;
+      animation: sparkle 1.2s ease-out forwards;
+    }
+
+    @keyframes sparkle {
+      0% {
+        transform: scale(0) rotate(0deg);
+        opacity: 1;
+      }
+      50% {
+        transform: scale(1) rotate(180deg);
+        opacity: 0.8;
+      }
+      100% {
+        transform: scale(0.5) rotate(360deg) translateY(-80px);
+        opacity: 0;
+      }
+    }
+
+    .score-popup {
+      position: absolute;
+      color: #ffd700;
+      font-size: 1.8rem;
+      font-weight: bold;
+      pointer-events: none;
+      text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8);
+      z-index: 30;
+      animation: scoreFloat 1.5s ease-out forwards;
+    }
+
+    @keyframes scoreFloat {
+      0% {
+        transform: translateY(0) scale(0.5);
+        opacity: 1;
+      }
+      50% {
+        transform: translateY(-40px) scale(1.2);
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(-100px) scale(1);
+        opacity: 0;
+      }
+    }
+
+    .combo-indicator {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 2.5rem;
+      color: #ff6b6b;
+      font-weight: bold;
+      pointer-events: none;
+      z-index: 40;
+      text-shadow: 4px 4px 8px rgba(0, 0, 0, 0.8);
+      animation: comboShow 2s ease-out forwards;
+    }
+
+    @keyframes comboShow {
+      0% {
+        transform: translate(-50%, -50%) scale(0) rotate(-180deg);
+        opacity: 0;
+      }
+      30% {
+        transform: translate(-50%, -50%) scale(1.3) rotate(0deg);
+        opacity: 1;
+      }
+      70% {
+        transform: translate(-50%, -50%) scale(1) rotate(0deg);
+        opacity: 1;
+      }
+      100% {
+        transform: translate(-50%, -50%) scale(0.8) rotate(0deg);
+        opacity: 0;
+      }
+    }
+
+    /* 遊戲結束畫面 */
+    .game-over {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0, 0, 0, 0.95);
+      backdrop-filter: blur(20px);
+      color: white;
+      padding: 40px;
+      border-radius: 25px;
+      text-align: center;
+      z-index: 200;
+      border: 3px solid #ffd700;
+      box-shadow: 0 0 40px rgba(255, 215, 0, 0.6);
+      max-width: 400px;
+      width: 90%;
+    }
+
+    .game-over h2 {
+      font-size: 2.2rem;
+      margin-bottom: 20px;
+      color: #ffd700;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    .game-over .final-stats {
+      font-size: 1.3rem;
+      margin: 15px 0;
+      line-height: 1.6;
+    }
+
+    .game-over .rank {
+      font-size: 1.5rem;
+      color: #ff6b6b;
+      font-weight: bold;
+      margin: 20px 0;
+    }
+
+    .restart-btn {
+      background: linear-gradient(135deg, #ff6b6b, #feca57);
+      color: white;
+      border: none;
+      padding: 15px 35px;
+      font-size: 1.2rem;
+      border-radius: 12px;
+      cursor: pointer;
+      margin-top: 25px;
+      font-weight: bold;
+      box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .restart-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 8px 25px rgba(255, 107, 107, 0.6);
+    }
+
+    .restart-btn:active {
+      transform: translateY(-1px);
+    }
+
+    /* 平板響應式設計 */
+    @media (max-width: 768px) {
+      .hud {
+        grid-template-columns: 1fr;
+        gap: 15px;
+        padding: 15px;
+        margin: 0 10px;
+      }
+
+      .stat-value {
+        font-size: 1.5rem;
+      }
+
+      .game-over {
+        padding: 30px 20px;
+        width: 95%;
+      }
+
+      .game-over h2 {
+        font-size: 1.8rem;
+      }
+
+      .restart-btn {
+        padding: 12px 25px;
+        font-size: 1rem;
+      }
+    }
+
+    /* 觸控反饋 */
+    .canvas-touch-feedback {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: rgba(255, 215, 0, 0.3);
+      border: 2px solid rgba(255, 215, 0, 0.6);
+      pointer-events: none;
+      z-index: 20;
+      animation: touchRipple 0.6s ease-out forwards;
+    }
+
+    @keyframes touchRipple {
+      0% {
+        transform: scale(0);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(2);
+        opacity: 0;
+      }
+    }
+
+    .instructions {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.7);
+      color: rgba(255, 255, 255, 0.9);
+      padding: 12px 20px;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      text-align: center;
+      backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      z-index: 15;
+    }
+
+    /* 載入畫面 */
+    .loading {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #ffd700;
+      font-size: 1.5rem;
+      text-align: center;
+      z-index: 100;
+    }
+
+    .error-message {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(255, 0, 0, 0.8);
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      z-index: 100;
+      max-width: 400px;
+      width: 90%;
+    }
+  </style>
+</head>
+<body>
+  <div class="stars"></div>
+  
+  <canvas id="gameCanvas"></canvas>
+  
+  <div class="game-ui">
+    <div class="hud">
+      <div class="stat">
+        <div class="stat-label">🏮 分數</div>
+        <div class="stat-value" id="scoreValue">0</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">⏰ 時間</div>
+        <div class="stat-value" id="timeValue">60</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">🔥 連擊</div>
+        <div class="stat-value" id="comboValue">0</div>
+      </div>
+    </div>
+  </div>
+  
+  <div class="instructions">
+    點擊飛舞的天燈獲得分數！連續點擊可獲得連擊獎勵！
+  </div>
+  
+  <div class="loading" id="loadingScreen">
+    <p>正在載入遊戲...</p>
+  </div>
+
+<script>
+    class SkyLanternGame {
+      constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        this.resizeCanvas();
+        this.loadingScreen = document.getElementById('loadingScreen');
+
+        this.lanterns = [];
+        this.score = 0;
+        this.combo = 0;
+        this.maxCombo = 0;
+        this.timeLeft = 180;
+        this.gameRunning = false;
+        this.comboTimer = null;
+
+        // 我們只需要一個圖片陣列
+        this.lanternImages = [];
+
+        this.initEvents();
+        
+        console.log('🏮 天燈遊戲準備中...');
+        this.loadLanternImages();
+      }
+
+      // 使用 Canvas 繪製一個備用天燈圖案 (作為萬一圖檔載入失敗的備案)
+      createFallbackLantern() {
+        const canvas = document.createElement('canvas');
+        canvas.width = 80;
+        canvas.height = 100;
+        const ctx = canvas.getContext('2d');
+
+        const colors = ['#ff6b6b', '#feca57', '#00bfff', '#9b59b6', '#32cd32'];
+        const bodyColor = colors[Math.floor(Math.random() * colors.length)];
+        const flameColor = '#ffed00';
+
+        // 燈籠本體
+        ctx.fillStyle = bodyColor;
+        ctx.beginPath();
+        ctx.moveTo(40, 0);
+        ctx.quadraticCurveTo(80, 20, 80, 50);
+        ctx.quadraticCurveTo(80, 80, 40, 100);
+        ctx.quadraticCurveTo(0, 80, 0, 50);
+        ctx.quadraticCurveTo(0, 20, 40, 0);
+        ctx.closePath();
+        ctx.fill();
+
+        // 燈籠底部
+        ctx.fillStyle = '#f7f1e3';
+        ctx.fillRect(30, 95, 20, 5);
+
+        // 繩子
+        ctx.strokeStyle = '#feca57';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(40, 100);
+        ctx.lineTo(40, 105);
+        ctx.stroke();
+
+        // 蠟燭火焰
+        ctx.fillStyle = flameColor;
+        ctx.beginPath();
+        ctx.arc(40, 105, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        const img = new Image();
+        img.src = canvas.toDataURL();
+        return img;
+      }
+      
+      // 載入天燈圖片
+      loadLanternImages() {
+        // 在此放入你的天燈圖檔名稱，例如 'my_lantern.png'
+        const lanternPaths = [
+          '1.png', 
+          '2.png', 
+          '3.png', 
+          '4.png',
+          '5.png',
+          '6.png'
+        ];
+        
+        let loadedCount = 0;
+        const totalImages = lanternPaths.length;
+        
+        const checkLoadStatus = () => {
+          loadedCount++;
+          if (loadedCount === totalImages) {
+            console.log('🏮 所有天燈圖片載入或備用方案已準備完成！');
+            this.loadingScreen.style.display = 'none';
+            this.startGame();
+          }
+        };
+
+        if (totalImages === 0) {
+          // 如果沒有提供圖片路徑，直接使用備用圖案
+          this.lanternImages.push(this.createFallbackLantern());
+          this.loadingScreen.style.display = 'none';
+          this.startGame();
+          return;
+        }
+
+        lanternPaths.forEach(path => {
+          const img = new Image();
+          img.onload = () => {
+            this.lanternImages.push(img);
+            checkLoadStatus();
+          };
+          img.onerror = () => {
+            console.warn(`⚠️ 無法載入圖片: ${path}，使用備用圖案。`);
+            this.lanternImages.push(this.createFallbackLantern());
+            checkLoadStatus();
+          };
+          img.src = path;
+        });
+      }
+
+      resizeCanvas() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+      }
+
+      initEvents() {
+        const handleInteraction = (x, y) => {
+          if (!this.gameRunning) return;
+          this.createTouchFeedback(x, y);
+          this.handleClick(x, y);
+        };
+
+        this.canvas.addEventListener('mousedown', (e) => {
+          const rect = this.canvas.getBoundingClientRect();
+          const x = e.clientX - rect.left;
+          const y = e.clientY - rect.top;
+          handleInteraction(x, y);
+        });
+
+        this.canvas.addEventListener('touchstart', (e) => {
+          e.preventDefault();
+          const touch = e.touches[0];
+          const rect = this.canvas.getBoundingClientRect();
+          const x = touch.clientX - rect.left;
+          const y = touch.clientY - rect.top;
+          handleInteraction(x, y);
+        }, { passive: false });
+
+        window.addEventListener('resize', () => {
+          this.resizeCanvas();
+        });
+      }
+
+      createTouchFeedback(x, y) {
+        const feedback = document.createElement('div');
+        feedback.className = 'canvas-touch-feedback';
+        feedback.style.left = (x - 30) + 'px';
+        feedback.style.top = (y - 30) + 'px';
+        document.body.appendChild(feedback);
+        
+        setTimeout(() => {
+          feedback.remove();
+        }, 600);
+      }
+
+      startGame() {
+        if (this.gameRunning) return;
+        this.gameRunning = true;
+        this.score = 0;
+        this.combo = 0;
+        this.maxCombo = 0;
+        this.timeLeft = 180;
+        this.lanterns = [];
+        
+        document.getElementById('scoreValue').textContent = this.score;
+        document.getElementById('timeValue').textContent = this.timeLeft;
+        document.getElementById('comboValue').textContent = this.combo;
+        
+        this.startTimer();
+        this.startSpawning();
+        this.render();
+      }
+
+      startTimer() {
+        this.timer = setInterval(() => {
+          this.timeLeft--;
+          document.getElementById('timeValue').textContent = this.timeLeft;
+          
+          if (this.timeLeft <= 0) {
+            this.endGame();
+          }
+        }, 1000);
+      }
+
+      startSpawning() {
+        const spawnLoop = () => {
+          if (!this.gameRunning) return;
+          this.spawnLantern();
+          const delay = Math.random() * 800 + 600;
+          this.spawnTimer = setTimeout(spawnLoop, delay);
+        };
+        spawnLoop();
+      }
+
+      // 生成天燈
+      spawnLantern() {
+        const x = Math.random() * (this.canvas.width - 100) + 50;
+        const y = this.canvas.height + 100;
+        const speed = Math.random() * 1 + 1.5; // 速度範圍: 1.5 ~ 2.5
+        const rotation = 0;
+        const rotationSpeed = (Math.random() - 0.5) * 0.01;
+
+  // 隨機選一張天燈圖片
+  const lanternImg = this.lanternImages[Math.floor(Math.random() * this.lanternImages.length)];
+
+  this.lanterns.push({ 
+    x, 
+    y, 
+    speed,
+    img: lanternImg,
+    isLit: false,
+    scale: 0.8 + Math.random() * 0.4,
+    // 搖擺參數
+      lifetime: 0,
+      driftAmplitude: Math.random() * 4 + 2,  // 左右擺動幅度大
+      driftSpeed: Math.random() * 0.05 + 0.02,   // 搖擺速度
+      driftDirection: Math.random() < 0.5 ? -1 : 1 // 左右方向
+  });
+
+}
+
+// 繪製與更新天燈
+render() {
+  if (!this.gameRunning) return;
+
+  this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+  for (let i = this.lanterns.length - 1; i >= 0; i--) {
+    const l = this.lanterns[i];
+
+    // 更新生命週期
+    l.lifetime += 1;
+
+    // 垂直上升
+    l.y -= l.speed;
+
+    // 左右搖擺（像隨風飄）
+    l.x += Math.sin(l.lifetime * l.driftSpeed) * l.driftAmplitude * l.driftDirection;
+
+    // 更新旋轉（輕微搖晃）
+    l.rotation += l.rotationSpeed;
+
+    // 繪製天燈圖片
+    this.ctx.save();
+    this.ctx.translate(l.x, l.y);
+    this.ctx.rotate(l.rotation);
+    this.ctx.drawImage(
+      l.img,
+      -40 * l.scale,
+      -50 * l.scale,
+      80 * l.scale,
+      100 * l.scale
+    );
+    this.ctx.restore();
+
+    // 飛出畫布上方就移除
+    if (l.y < -150) {
+      this.lanterns.splice(i, 1);
+    }
+  }
+
+  requestAnimationFrame(() => this.render());
+}
+
+
+      handleClick(x, y) {
+        if (!this.gameRunning) return;
+
+        for (let i = this.lanterns.length - 1; i >= 0; i--) {
+          const l = this.lanterns[i];
+          const hitboxSize = 80 * l.scale;
+          const hitboxHeight = 100 * l.scale;
+          
+          if (x >= l.x && x <= l.x + hitboxSize && 
+              y >= l.y && y <= l.y + hitboxHeight && !l.isLit) {
+            
+            l.isLit = true; // 將天燈點亮
+
+            // 更新連擊
+            this.combo++;
+            this.maxCombo = Math.max(this.maxCombo, this.combo);
+            
+            if (this.comboTimer) clearTimeout(this.comboTimer);
+            this.comboTimer = setTimeout(() => {
+              this.combo = 0;
+              document.getElementById('comboValue').textContent = '0';
+            }, 2000);
+
+            // 計算分數（連擊獎勵）
+            let points = 10;
+            if (this.combo >= 10) points = 50;
+            else if (this.combo >= 5) points = 30;
+            else if (this.combo >= 3) points = 20;
+
+            this.score += points;
+            document.getElementById('scoreValue').textContent = this.score;
+            document.getElementById('comboValue').textContent = this.combo;
+
+            // 顯示特效
+            this.showScorePopup(l.x + hitboxSize/2, l.y + hitboxHeight/2, points);
+            this.createExplosion(l.x + hitboxSize/2, l.y + hitboxHeight/2);
+            
+            if (this.combo >= 5 && this.combo % 5 === 0) {
+              this.showComboIndicator();
+            }
+            
+            break;
+          }
+        }
+      }
+
+      showScorePopup(x, y, points) {
+        const popup = document.createElement('div');
+        popup.className = 'score-popup';
+        popup.textContent = `+${points}`;
+        popup.style.left = x + 'px';
+        popup.style.top = y + 'px';
+        document.body.appendChild(popup);
+        
+        setTimeout(() => popup.remove(), 1500);
+      }
+
+      showComboIndicator() {
+        const indicator = document.createElement('div');
+        indicator.className = 'combo-indicator';
+        indicator.textContent = `🔥 ${this.combo}x 連擊！`;
+        document.body.appendChild(indicator);
+        
+        setTimeout(() => indicator.remove(), 2000);
+      }
+
+      createExplosion(x, y) {
+        const colors = ['#ffd700', '#ff6347', '#ff69b4', '#00bfff', '#32cd32'];
+        
+        for (let i = 0; i < 8; i++) {
+          const particle = document.createElement('div');
+          particle.className = 'particle';
+          particle.style.left = x + 'px';
+          particle.style.top = y + 'px';
+          particle.style.background = colors[Math.floor(Math.random() * colors.length)];
+          particle.style.transform = `rotate(${i * 45}deg)`;
+          document.body.appendChild(particle);
+          
+          setTimeout(() => particle.remove(), 1200);
+        }
+      }
+
+      endGame() {
+        this.gameRunning = false;
+        clearInterval(this.timer);
+        if (this.spawnTimer) clearTimeout(this.spawnTimer);
+        
+        this.showGameOverScreen();
+      }
+
+      showGameOverScreen() {
+        let rank = '';
+        if (this.score >= 2000) rank = '🏆 天燈大師！';
+        else if (this.score >= 1000) rank = '🥇 點燈高手！';
+        else if (this.score >= 500) rank = '🥈 天燈好手';
+        else if (this.score >= 200) rank = '🥉 天燈新手';
+        else rank = '📚 繼續努力！';
+
+        const gameOver = document.createElement('div');
+        gameOver.className = 'game-over';
+        gameOver.innerHTML = `
+          <h2>🎊 遊戲結束 🎊</h2>
+          <div class="final-stats">
+            <div>最終分數: <strong>${this.score}</strong></div>
+            <div>最高連擊: <strong>${this.maxCombo}</strong></div>
+          </div>
+          <div class="rank">${rank}</div>
+          <button class="restart-btn" onclick="location.reload()">🔄 再玩一次</button>
+        `;
+        
+        document.body.appendChild(gameOver);
+      }
+
+      render() {
+        if (!this.gameRunning) return;
+        
+        requestAnimationFrame(() => this.render());
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        for (let i = this.lanterns.length - 1; i >= 0; i--) {
+          const l = this.lanterns[i];
+          
+          // 修改：天燈固定往上移動（y 座標減少）
+          l.y -= l.speed;
+          l.rotation += l.rotationSpeed;
+          
+          // 修改：當天燈移動到螢幕頂部以上時移除
+          if (l.y + 100 * l.scale < 0) {
+            this.lanterns.splice(i, 1);
+            continue;
+          }
+          
+          this.ctx.save();
+          this.ctx.translate(l.x + 40 * l.scale, l.y + 50 * l.scale);
+          this.ctx.rotate(l.rotation);
+          this.ctx.scale(l.scale, l.scale);
+
+          // 根據 isLit 狀態應用濾鏡
+          if (!l.isLit) {
+            this.ctx.filter = 'brightness(0.6) saturate(0.8)'; // 稍微變暗但保持色彩
+          } else {
+            this.ctx.filter = 'brightness(1.2) drop-shadow(0 0 15px rgba(255, 255, 150, 0.8))'; // 更亮並添加光暈效果
+          }
+          
+          // 確保天燈方向正確：如果需要翻轉則垂直翻轉
+          if (l.flipVertical) {
+            this.ctx.scale(1, -1);
+          }
+          
+          this.ctx.drawImage(l.img, -40, -50, 80, 100);
+          
+          this.ctx.restore(); // 重置濾鏡和變換
+        }
+      }
+    }
+
+    // 啟動遊戲
+    document.addEventListener('DOMContentLoaded', () => {
+      try {
+        new SkyLanternGame();
+      } catch (err) {
+        console.error('❌ 遊戲啟動失敗：', err);
+        alert('遊戲啟動失敗，請重新整理頁面');
+      }
+    });
+
+    // 防止頁面滾動和縮放
+    document.addEventListener('touchmove', (e) => {
+      e.preventDefault();
+    }, { passive: false });
+
+    document.addEventListener('gesturestart', (e) => {
+      e.preventDefault();
+    });
+</script></body>
+</html>
