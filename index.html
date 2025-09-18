@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>點亮天燈</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100vh;
+        overflow: hidden;
+        font-family: "標楷體", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+        background-color: #ffffff;
+        }
+
+
+        
+        body {
+            font-family: "標楷體", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+            background: linear-gradient(135deg, #ffffff 0%, #ffffff 100%);
+            min-height: 100vh;
+            position: relative;
+        }
+
+       .header {
+        display: flex;
+        align-items: center;
+        padding: 20px;
+        box-shadow: none;        /* 移除陰影 */
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        justify-content: center; /* 水平置中標題 */
+        }
+
+        
+        /* 返回箭頭 */
+        .back-arrow {
+            font-size: 60px;
+            cursor: pointer;
+            margin-right: 20px;
+            transition: transform 0.2s;
+        }
+
+        .back-arrow:hover { transform: translateX(-3px); }
+
+     .title { 
+        font-size: 60px;
+        font-weight: bold;
+        color: #2c3e50;
+        text-shadow: 2px 2px 8px rgba(0,0,0,0.1);
+        text-align: center;
+        width: 100%;
+        margin-top: 20px; /* 調整這個數值，文字就會往下 */
+        font-family: "標楷體", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+    }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 100px 20px 40px;
+            display: flex;
+            gap: 40px;
+            align-items: flex-start;
+        }
+
+        .lantern-area {
+            flex: 1;
+            padding: 50px;
+            position: relative;
+            min-height: 500px;
+        }
+
+        .lantern {
+            position: absolute;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            transform-origin: center bottom;
+        }
+
+        .lantern:hover { transform: scale(1.1); }
+        
+        /* 天燈 */
+        .lantern-body {
+            width: 250px;
+            height: 125px;
+            position: relative;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+        }
+
+.controls {
+    display: flex;
+    justify-content: flex-start; /* 往左對齊 */
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: 300px;  /* 往上 */
+    position: relative;
+    left: -110px; /* 視需要再調整數值 */
+}
+
+
+
+        /* 控制按鈕 */
+        .control-btn {
+            padding: 45px 50px;
+            background: #565656;
+            color: white;
+            border: none;
+            border-radius: 15px;
+            font-size: 35px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 200px;
+            box-shadow: 0 5px 15px rgba(52,73,94,0.3);
+            font-family: "標楷體", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+        }
+
+        .control-btn:hover {
+            background: #565656;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(52,73,94,0.4);
+        }
+
+        .control-btn:active { transform: translateY(0); }
+
+        .floating-particles {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            width: 6px;
+            height: 6px;
+            background: #ffd93d;
+            border-radius: 50%;
+            opacity: 0.7;
+            animation: rise 3s linear infinite;
+        }
+
+        @keyframes rise {
+            from { transform: translateY(0); opacity: 0.7; }
+            to { transform: translateY(-100px); opacity: 0; }
+        }
+
+@media (width: 1024px) and (height: 768px) {
+    /* iPad 橫向專用設定 */
+}
+
+@media (width: 768px) and (height: 1024px) {
+    /* iPad 直向專用設定 */
+}
+    
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="back-arrow" onclick="location.href='../gameselect.html'"><</div>
+        <div class="title">點亮天燈</div>
+    </div>
+
+    <div class="container">
+        <div class="lantern-area" id="lanternArea">
+            <div class="floating-particles" id="particles"></div>
+        </div>
+        
+        <div class="controls">
+            <button class="control-btn" onclick="location.href='天燈規則說明.html'">文字遊戲解說</button>
+            <button class="control-btn" onclick="location.href='天燈影片說明.html'">影片遊戲解說</button>
+            <button class="control-btn" onclick="location.href='天燈(選擇介面).html'">跳過解說</button>
+        </div>
+    </div>
+
+    <script>
+    let lanterns = [];
+    let litCount = 0;
+    let totalCount = 0;
+
+    const area = document.getElementById('lanternArea');
+
+const lanternPositions = [  
+    {x: 190, y: 110, scale: 1.5}, // 左上 
+    {x: 300, y: 90, scale: 0.6}, // 左中 
+    {x: 420, y: 80, scale: 1}, // 中左 
+    {x: 550, y: 10, scale: 1.1}, // 中右 
+    {x: 650, y: 80, scale: 0.9}, // 右中 
+    {x: 780, y: 150, scale: 1.3}, // 右下 
+    ];
+
+    function createLantern(x, y, scale=1) {
+        const lantern = document.createElement('div');
+        lantern.className = 'lantern';
+        lantern.style.left = x + 'px';
+        lantern.style.top = y + 'px';
+        lantern.style.transform = `scale(${scale})`;
+        const randomLantern = Math.floor(Math.random()*6)+1;
+        const lanternImage = `picture/${randomLantern}.png`;
+        lantern.innerHTML = `<div class="lantern-string"></div>
+                             <div class="lantern-body" style="background-image: url('${lanternImage}');"></div>`;
+        lantern.onclick = () => lightLantern(lantern);
+        return lantern;
+    }
+
+    function lightLantern(lantern) {
+        if(!lantern.classList.contains('lit')){
+            lantern.classList.add('lit');
+            litCount++;
+            createParticles(lantern);
+        }
+    }
+
+    function createParticles(lantern) {
+        const particles = document.getElementById('particles');
+        const rect = lantern.getBoundingClientRect();
+        const areaRect = area.getBoundingClientRect();
+        for(let i=0;i<10;i++){
+            setTimeout(()=>{
+                const particle = document.createElement('div');
+                particle.className='particle';
+                particle.style.left=(rect.left-areaRect.left+40)+'px';
+                particle.style.top=(rect.top-areaRect.top+50)+'px';
+                particle.style.animationDelay=Math.random()*0.5+'s';
+                particles.appendChild(particle);
+                setTimeout(()=>particle.remove(),3000);
+            }, i*100);
+        }
+    }
+
+    function goBack() {
+        if(confirm('確定要返回嗎？')) alert('返回上一頁');
+    }
+
+    window.onload = function(){
+        // 使用自訂位置生成天燈
+        lanternPositions.forEach(pos => {
+            const lantern = createLantern(pos.x, pos.y, pos.scale);
+            area.appendChild(lantern);
+            lanterns.push(lantern);
+            totalCount++;
+        });
+    };
+</script>
+</body>
+</html>
